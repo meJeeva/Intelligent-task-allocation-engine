@@ -1,17 +1,19 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../components/common/Card';
 import useFetch from '../hooks/useFetch';
 import { mockApi } from '../services/api';
+import { showNotification } from '../utils/helpers';
 
 const Dashboard = () => {
-  // Using mock data for now - replace with real API calls when backend is ready
+  const navigate = useNavigate();
+
   const { data: teamData, loading: teamLoading } = useFetch(mockApi.getMockTeam);
   const { data: taskData, loading: taskLoading } = useFetch(mockApi.getMockTasks);
 
   const teamMembers = teamData || [];
   const tasks = taskData || [];
 
-  // Calculate enhanced statistics
   const totalMembers = teamMembers.length;
   const totalTasks = tasks.length;
   const unassignedTasks = tasks.filter(task => task.status === 'unassigned').length;
@@ -20,7 +22,6 @@ const Dashboard = () => {
   const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const pendingTasks = tasks.filter(task => task.status === 'pending').length;
 
-  // Calculate average workload and performance
   const avgWorkload = teamMembers.length > 0
     ? Math.round(teamMembers.reduce((sum, member) => sum + member.workload, 0) / teamMembers.length)
     : 0;
@@ -28,7 +29,6 @@ const Dashboard = () => {
     ? Math.round(teamMembers.reduce((sum, member) => sum + (member.performanceScore || 0), 0) / teamMembers.length)
     : 0;
 
-  // Get unique skills
   const allSkills = new Set();
   teamMembers.forEach(member => {
     member.skills?.forEach(skill => allSkills.add(skill));
@@ -77,6 +77,21 @@ const Dashboard = () => {
 
   const recentTasks = tasks.slice(0, 5);
 
+  const handleAddTeamMember = () => {
+    navigate('/team');
+    showNotification('Opening Team Management to add new member', 'info');
+  };
+
+  const handleCreateTask = () => {
+    navigate('/tasks');
+    showNotification('Opening Task Management to create new task', 'info');
+  };
+
+  const handleRunAllocation = () => {
+    navigate('/allocation');
+    showNotification('Opening Allocation Results to run intelligent allocation', 'info');
+  };
+
   if (teamLoading || taskLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -87,13 +102,11 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
         <p className="text-slate-600 mt-2">Overview of your task allocation system</p>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsCards.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
@@ -114,7 +127,6 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Task Status Chart */}
         <Card title="Task Status Distribution">
           <div className="space-y-4">
             {taskStatusData.map((item, index) => (
@@ -127,7 +139,6 @@ const Dashboard = () => {
               </div>
             ))}
 
-            {/* Simple bar chart */}
             <div className="mt-4 pt-4 border-t border-slate-200">
               <div className="flex items-end justify-between h-24">
                 {taskStatusData.map((item, index) => (
@@ -147,7 +158,6 @@ const Dashboard = () => {
           </div>
         </Card>
 
-        {/* Team Skills Overview */}
         <Card title="Team Skills Overview">
           <div className="space-y-4">
             <div className="text-sm text-slate-600 mb-3">
@@ -172,7 +182,6 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Tasks */}
       <Card title="Recent Tasks">
         <div className="space-y-3">
           {recentTasks.length > 0 ? (
@@ -206,19 +215,33 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {/* Quick Actions */}
       <Card title="Quick Actions">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition-colors">
-            <span className="text-2xl mb-2 block">👥</span>
+          <button
+            onClick={handleAddTeamMember}
+            className="p-4 bg-blue-50 hover:bg-blue-100 rounded-lg text-center transition-all duration-200 hover:shadow-md group"
+          >
+            <svg className="w-8 h-8 mx-auto mb-2 text-blue-600 group-hover:text-blue-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
             <span className="text-sm font-medium text-blue-900">Add Team Member</span>
           </button>
-          <button className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition-colors">
-            <span className="text-2xl mb-2 block">📋</span>
+          <button
+            onClick={handleCreateTask}
+            className="p-4 bg-green-50 hover:bg-green-100 rounded-lg text-center transition-all duration-200 hover:shadow-md group"
+          >
+            <svg className="w-8 h-8 mx-auto mb-2 text-green-600 group-hover:text-green-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
             <span className="text-sm font-medium text-green-900">Create Task</span>
           </button>
-          <button className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition-colors">
-            <span className="text-2xl mb-2 block">🎯</span>
+          <button
+            onClick={handleRunAllocation}
+            className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg text-center transition-all duration-200 hover:shadow-md group"
+          >
+            <svg className="w-8 h-8 mx-auto mb-2 text-purple-600 group-hover:text-purple-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
             <span className="text-sm font-medium text-purple-900">Run Allocation</span>
           </button>
         </div>

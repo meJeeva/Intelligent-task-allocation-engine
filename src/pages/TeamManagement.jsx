@@ -26,11 +26,9 @@ const TeamManagement = () => {
   const handleDeleteMember = async (memberId) => {
     if (window.confirm('Are you sure you want to delete this team member?')) {
       try {
-        // Try real API first, fallback to mock
         try {
           await teamApi.deleteMember(memberId);
         } catch (apiError) {
-          // If real API fails, use mock API
           await mockApi.deleteMember(memberId);
         }
 
@@ -45,21 +43,17 @@ const TeamManagement = () => {
   const handleFormSubmit = async (memberData) => {
     try {
       if (editingMember) {
-        // Update existing member
         try {
           await teamApi.updateMember(editingMember.id, memberData);
         } catch (apiError) {
-          // If real API fails, use mock API
           await mockApi.updateMember(editingMember.id, memberData);
         }
 
         showNotification('Team member updated successfully', 'success');
       } else {
-        // Add new member
         try {
           await teamApi.addMember(memberData);
         } catch (apiError) {
-          // If real API fails, use mock API
           await mockApi.addMember(memberData);
         }
 
@@ -78,8 +72,8 @@ const TeamManagement = () => {
     setEditingMember(null);
   };
 
-  // Calculate enhanced statistics
   const totalMembers = teamMembers?.length || 0;
+  console.log('totalMembers',teamMembers)
   const avgWorkload = totalMembers > 0
     ? Math.round(teamMembers.reduce((sum, member) => sum + member.workload, 0) / totalMembers)
     : 0;
@@ -92,82 +86,83 @@ const TeamManagement = () => {
   const seniorMembers = teamMembers?.filter(member => member.skillLevel === 'Senior').length || 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
-          <p className="text-gray-600 mt-2">Manage your team members, skills, and performance metrics</p>
+    <div>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
+            <p className="text-gray-600 mt-2">Manage your team members, skills, and performance metrics</p>
+          </div>
+          <Button onClick={handleAddMember}>
+            Add Team Member
+          </Button>
         </div>
-        <Button onClick={handleAddMember}>
-          Add Team Member
-        </Button>
-      </div>
 
-      {/* Enhanced Team Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{totalMembers}</div>
-            <div className="text-sm text-gray-600 mt-1">Total Members</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{avgWorkload}%</div>
-            <div className="text-sm text-gray-600 mt-1">Avg Workload</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{avgPerformance}</div>
-            <div className="text-sm text-gray-600 mt-1">Avg Performance</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{uniqueSkills}</div>
-            <div className="text-sm text-gray-600 mt-1">Unique Skills</div>
-          </div>
-        </Card>
-        <Card>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">{seniorMembers}</div>
-            <div className="text-sm text-gray-600 mt-1">Senior Members</div>
-          </div>
-        </Card>
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{totalMembers}</div>
+              <div className="text-sm text-gray-600 mt-1">Total Members</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{avgWorkload}%</div>
+              <div className="text-sm text-gray-600 mt-1">Avg Workload</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{avgPerformance}</div>
+              <div className="text-sm text-gray-600 mt-1">Avg Performance</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{uniqueSkills}</div>
+              <div className="text-sm text-gray-600 mt-1">Unique Skills</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-indigo-600">{seniorMembers}</div>
+              <div className="text-sm text-gray-600 mt-1">Senior Members</div>
+            </div>
+          </Card>
+        </div>
 
-      {/* Team Table */}
-      <Card title="Team Members">
-        {error ? (
-          <div className="text-center py-8">
-            <div className="text-red-600 mb-2">Error loading team data</div>
-            <Button onClick={refetch} variant="secondary">Retry</Button>
-          </div>
-        ) : (
-          <TeamTable
-            members={teamMembers || []}
-            loading={loading}
-            onEdit={handleEditMember}
-            onDelete={handleDeleteMember}
+        <Card title="Team Members">
+          {error ? (
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-2">Error loading team data</div>
+              <Button onClick={refetch} variant="secondary">Retry</Button>
+            </div>
+          ) : (
+            <TeamTable
+              members={teamMembers || []}
+              loading={loading}
+              onEdit={handleEditMember}
+              onDelete={handleDeleteMember}
+            />
+          )}
+        </Card>
+
+
+      </div>
+      <div>
+        <Modal
+          isOpen={isModalOpen}
+          onClose={handleModalClose}
+          title={editingMember ? 'Edit Team Member' : 'Add Team Member'}
+          size="large"
+        >
+          <TeamForm
+            member={editingMember}
+            onSubmit={handleFormSubmit}
+            onCancel={handleModalClose}
           />
-        )}
-      </Card>
-
-      {/* Add/Edit Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-        title={editingMember ? 'Edit Team Member' : 'Add Team Member'}
-        size="large"
-      >
-        <TeamForm
-          member={editingMember}
-          onSubmit={handleFormSubmit}
-          onCancel={handleModalClose}
-        />
-      </Modal>
+        </Modal>
+      </div>
     </div>
   );
 };

@@ -113,8 +113,8 @@ const TeamForm = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Input
           label="Name"
           name="name"
@@ -138,7 +138,7 @@ const TeamForm = ({
       </div>
 
       <div>
-        <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="skills" className="block text-sm font-medium text-slate-700 mb-2">
           Skills (comma-separated)
         </label>
         <input
@@ -147,15 +147,15 @@ const TeamForm = ({
           name="skills"
           value={formData.skills}
           onChange={handleChange}
-          className="input-field"
+          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
           placeholder="e.g., JavaScript, React, Node.js"
         />
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-slate-500">
           Enter skills separated by commas
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Select
           label="Skill Level"
           name="skillLevel"
@@ -168,23 +168,33 @@ const TeamForm = ({
         />
 
         <div>
-          <label htmlFor="workload" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="workload" className="block text-sm font-medium text-slate-700 mb-2">
             Workload (%)
           </label>
-          <div className="flex items-center space-x-3">
-            <input
-              type="range"
-              id="workload"
-              name="workload"
-              min="0"
-              max="100"
-              value={formData.workload}
-              onChange={handleChange}
-              className="flex-1"
-            />
-            <span className="text-sm font-medium text-gray-700 w-12 text-center">
-              {formData.workload}%
-            </span>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <input
+                type="range"
+                id="workload"
+                name="workload"
+                min="0"
+                max="100"
+                value={formData.workload}
+                onChange={handleChange}
+                className="flex-1 accent-blue-600"
+              />
+              <input
+                type="number"
+                id="workload-input"
+                name="workload"
+                min="0"
+                max="100"
+                value={formData.workload}
+                onChange={handleChange}
+                className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-center font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-600">%</span>
+            </div>
           </div>
           {errors.workload && (
             <p className="mt-1 text-sm text-red-600">{errors.workload}</p>
@@ -192,23 +202,33 @@ const TeamForm = ({
         </div>
 
         <div>
-          <label htmlFor="capacity" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="capacity" className="block text-sm font-medium text-slate-700 mb-2">
             Capacity (%)
           </label>
-          <div className="flex items-center space-x-3">
-            <input
-              type="range"
-              id="capacity"
-              name="capacity"
-              min="0"
-              max="100"
-              value={formData.capacity}
-              onChange={handleChange}
-              className="flex-1"
-            />
-            <span className="text-sm font-medium text-gray-700 w-12 text-center">
-              {formData.capacity}%
-            </span>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <input
+                type="range"
+                id="capacity"
+                name="capacity"
+                min="0"
+                max="100"
+                value={formData.capacity}
+                onChange={handleChange}
+                className="flex-1 accent-blue-600"
+              />
+              <input
+                type="number"
+                id="capacity-input"
+                name="capacity"
+                min="0"
+                max="100"
+                value={formData.capacity}
+                onChange={handleChange}
+                className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-center font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-600">%</span>
+            </div>
           </div>
           {errors.capacity && (
             <p className="mt-1 text-sm text-red-600">{errors.capacity}</p>
@@ -217,7 +237,7 @@ const TeamForm = ({
       </div>
 
       <div>
-        <label htmlFor="performanceScore" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="performanceScore" className="block text-sm font-medium text-slate-700 mb-2">
           Performance Score (0-100)
         </label>
         <div className="flex items-center space-x-3">
@@ -229,21 +249,44 @@ const TeamForm = ({
             max="100"
             value={formData.performanceScore}
             onChange={handleChange}
-            className="flex-1"
+            className="flex-1 accent-blue-600"
           />
-          <span className="text-sm font-medium text-gray-700 w-12 text-center">
+          <span
+            className="min-w-[48px] text-center text-sm font-semibold px-2 py-1 rounded"
+            style={{
+              backgroundColor: formData.performanceScore >= 80 ? '#dcfce7' :
+                formData.performanceScore >= 60 ? '#fef3c7' : '#fee2e2',
+              color: formData.performanceScore >= 80 ? '#16a34a' :
+                formData.performanceScore >= 60 ? '#d97706' : '#dc2626'
+            }}
+          >
             {formData.performanceScore}
           </span>
         </div>
-        <p className="mt-1 text-sm text-gray-500">
-          0-59: Needs Improvement | 60-79: Good | 80-100: Excellent
+
+        {/* Performance indicator bar */}
+        <div className="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${formData.performanceScore}%`,
+              backgroundColor: formData.performanceScore >= 80 ? '#16a34a' :
+                formData.performanceScore >= 60 ? '#d97706' : '#dc2626'
+            }}
+          />
+        </div>
+
+        <p className="mt-2 text-sm text-slate-500">
+          <span className="text-red-600">0-59: Needs Improvement</span> |
+          <span className="text-amber-600"> 60-79: Good</span> |
+          <span className="text-green-600"> 80-100: Excellent</span>
         </p>
         {errors.performanceScore && (
           <p className="mt-1 text-sm text-red-600">{errors.performanceScore}</p>
         )}
       </div>
 
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex justify-end space-x-3 pt-6 border-t border-slate-200">
         <Button
           type="button"
           variant="secondary"

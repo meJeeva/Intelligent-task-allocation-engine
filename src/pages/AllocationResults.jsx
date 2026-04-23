@@ -9,18 +9,15 @@ const AllocationResults = () => {
   const [allocationData, setAllocationData] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Using mock data for demonstration
   const { data: mockAllocations, refetch } = useFetch(mockApi.getMockAllocationResults);
 
   const handleRunAllocation = async () => {
     setIsRunning(true);
     try {
-      // Try real API first, fallback to mock
       let result;
       try {
         result = await allocationApi.runAllocation();
       } catch (apiError) {
-        // If real API fails, use mock API with delay
         result = await mockApi.runAllocation();
       }
 
@@ -35,7 +32,6 @@ const AllocationResults = () => {
 
   const currentAllocations = allocationData || mockAllocations;
 
-  // Calculate allocation statistics
   const getAllocationStats = () => {
     if (!currentAllocations || currentAllocations.length === 0) {
       return {
@@ -65,13 +61,11 @@ const AllocationResults = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Allocation Results</h1>
         <p className="text-slate-600 mt-2">View and analyze intelligent task allocation results</p>
       </div>
 
-      {/* Allocation Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <div className="flex flex-col items-center space-y-3">
@@ -127,7 +121,6 @@ const AllocationResults = () => {
         </Card>
       </div>
 
-      {/* Allocation Algorithm Info */}
       <Card title="Allocation Algorithm">
         <div className="space-y-4">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -167,7 +160,6 @@ const AllocationResults = () => {
         </div>
       </Card>
 
-      {/* Allocation Results */}
       <Card>
         <AllocationTable
           allocations={currentAllocations || []}
@@ -176,7 +168,6 @@ const AllocationResults = () => {
         />
       </Card>
 
-      {/* Export Options */}
       {currentAllocations && currentAllocations.length > 0 && (
         <Card title="Export Options">
           <div className="space-y-4">
@@ -187,7 +178,6 @@ const AllocationResults = () => {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  // Export functionality would go here
                   showNotification('Export to CSV feature coming soon!', 'info');
                 }}
               >
@@ -196,7 +186,6 @@ const AllocationResults = () => {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  // Print functionality would go here
                   window.print();
                 }}
               >
@@ -205,7 +194,6 @@ const AllocationResults = () => {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  // Share functionality would go here
                   showNotification('Share feature coming soon!', 'info');
                 }}
               >
@@ -216,7 +204,6 @@ const AllocationResults = () => {
         </Card>
       )}
 
-      {/* Recommendations */}
       {currentAllocations && currentAllocations.length > 0 && (
         <Card title="Recommendations">
           <div className="space-y-3">

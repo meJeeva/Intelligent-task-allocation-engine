@@ -28,26 +28,25 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-slate-900 border-r border-slate-200 min-h-screen transition-all duration-300 ease-in-out shadow-xl`}>
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-slate-200 min-h-screen transition-all duration-300 ease-in-out shadow-xl`}>
       <div className={`${isCollapsed ? 'px-3' : 'p-6'}`}>
-        {/* Logo/Brand Section */}
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-8`}>
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">TaskFlow</h1>
-                <p className="text-xs text-slate-400">Intelligent Allocation</p>
+                <h1 className="text-lg font-bold text-slate-900">TaskFlow</h1>
+                <p className="text-xs text-slate-500">Intelligent Allocation</p>
               </div>
             </div>
           )}
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all duration-200 group"
+            className={`p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all duration-200 group ${isCollapsed ? 'mt-5' : ''}`}
             title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             <svg className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +55,6 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className="space-y-2">
           {navigation.map((item, index) => (
             <NavLink
@@ -65,37 +63,33 @@ const Sidebar = () => {
               className={({ isActive }) =>
                 `group relative flex items-center ${isCollapsed ? 'justify-center' : ''} ${isCollapsed ? 'py-3' : 'py-2.5 px-3'} text-sm font-medium rounded-xl transition-all duration-200 ${isActive
                   ? 'bg-blue-600 text-white shadow-lg transform scale-105'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white hover:shadow-md'
+                  : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:shadow-md'
                 }`
               }
               title={isCollapsed ? item.name : ''}
             >
               {({ isActive }) => (
                 <>
-                  {/* Active indicator */}
                   {isActive && !isCollapsed && (
-                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-blue-600 rounded-r-full"></div>
                   )}
 
-                  {/* Icon */}
-                  <svg className={`w-5 h-5 flex-shrink-0 transition-all duration-200 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                  <svg className={`w-5 h-4 flex-shrink-0 transition-all duration-200 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-600'
                     }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
                   </svg>
 
-                  {/* Text */}
                   {!isCollapsed && (
-                    <span className={`ml-3 transition-all duration-200 ${isActive ? 'text-white' : 'text-slate-400'
+                    <span className={`ml-3 transition-all duration-200 ${isActive ? 'text-white font-semibold' : 'text-slate-700'
                       }`}>
                       {item.name}
                     </span>
                   )}
 
-                  {/* Tooltip for collapsed mode */}
                   {isCollapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-900 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50">
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg">
                       {item.name}
-                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-slate-900 rotate-45 -ml-1"></div>
+                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-slate-800 rotate-45 -ml-1"></div>
                     </div>
                   )}
                 </>
@@ -104,12 +98,11 @@ const Sidebar = () => {
           ))}
         </nav>
 
-        {/* Bottom Section (only when expanded) */}
         {!isCollapsed && (
-          <div className="mt-8 pt-8 border-t border-slate-700">
+          <div className="mt-8 pt-8 border-t border-slate-200">
             <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center space-x-3 mb-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <div className="w-20 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
@@ -125,6 +118,7 @@ const Sidebar = () => {
       </div>
     </div>
   );
+
 };
 
 export default Sidebar;
