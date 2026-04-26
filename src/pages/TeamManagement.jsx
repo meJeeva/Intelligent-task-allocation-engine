@@ -5,11 +5,17 @@ import Modal from '../components/common/Modal';
 import TeamTable from '../components/team/TeamTable';
 import TeamForm from '../components/team/TeamForm';
 import useFetch from '../hooks/useFetch';
-import { teamApi, mockApi } from '../services/api';
+import { teamApi } from '../services/api';
 import { showNotification } from '../utils/helpers';
 
 const TeamManagement = () => {
-  const { data: teamMembers, loading, error, refetch } = useFetch(mockApi.getMockTeam);
+  const { data: teamData, loading: teamLoading, error, refetch: refetchTeam } = useFetch(teamApi.getTeam);
+  const { data: summaryData, loading: summaryLoading } = useFetch(teamApi.getTeamSummary);
+
+  const teamMembers = React.useMemo(() => {
+    if (!teamData || !Array.isArray(teamData)) return [];
+    return teamData.filter(member => member.name && member.name !== 'string');
+  }, [teamData]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
 
@@ -19,22 +25,22 @@ const TeamManagement = () => {
   };
 
   const handleEditMember = (member) => {
-    setEditingMember(member);
+    const memberWithId = {
+      ...member,
+      id: member.id || member.name?.replace(/\s+/g, '_').toLowerCase() || 'unknown'
+    };
+    setEditingMember(memberWithId);
     setIsModalOpen(true);
   };
 
   const handleDeleteMember = async (memberId) => {
     if (window.confirm('Are you sure you want to delete this team member?')) {
       try {
-        try {
-          await teamApi.deleteMember(memberId);
-        } catch (apiError) {
-          await mockApi.deleteMember(memberId);
-        }
-
+        await teamApi.deleteMember(memberId);
         showNotification('Team member deleted successfully', 'success');
         refetch();
       } catch (error) {
+        console.error('Error deleting team member:', error);
         showNotification('Error deleting team member', 'error');
       }
     }
@@ -43,26 +49,18 @@ const TeamManagement = () => {
   const handleFormSubmit = async (memberData) => {
     try {
       if (editingMember) {
-        try {
-          await teamApi.updateMember(editingMember.id, memberData);
-        } catch (apiError) {
-          await mockApi.updateMember(editingMember.id, memberData);
-        }
-
+        await teamApi.updateMember(editingMember.id, memberData);
         showNotification('Team member updated successfully', 'success');
       } else {
-        try {
-          await teamApi.addMember(memberData);
-        } catch (apiError) {
-          await mockApi.addMember(memberData);
-        }
-
+        console.log(memberData);
+        await teamApi.addMember(memberData);
         showNotification('Team member added successfully', 'success');
       }
 
       setIsModalOpen(false);
       refetch();
     } catch (error) {
+      console.error('Error saving team member:', error);
       showNotification('Error saving team member', 'error');
     }
   };
@@ -72,18 +70,24 @@ const TeamManagement = () => {
     setEditingMember(null);
   };
 
-  const totalMembers = teamMembers?.length || 0;
-  console.log('totalMembers',teamMembers)
-  const avgWorkload = totalMembers > 0
-    ? Math.round(teamMembers.reduce((sum, member) => sum + member.workload, 0) / totalMembers)
-    : 0;
-  const avgPerformance = totalMembers > 0
-    ? Math.round(teamMembers.reduce((sum, member) => sum + (member.performanceScore || 0), 0) / totalMembers)
-    : 0;
-  const uniqueSkills = teamMembers
-    ? [...new Set(teamMembers.flatMap(member => member.skills || []))].length
-    : 0;
-  const seniorMembers = teamMembers?.filter(member => member.skillLevel === 'Senior').length || 0;
+  const totalMembers = summaryData?.total_members || teamMembers?.length || 0;
+  const avgWorkload = summaryData?.avg_workload_percentage || (totalMembers > 0
+    ? Math.round(teamMembers.reduce((sum, member) => sum + (member.workload || 0), 0) / totalMembers)
+    : 0);
+  const avgPerformance = summaryData?.avg_performance ?
+    Math.round(summaryData.avg_performance * 100) :
+    (totalMembers > 0 ? Math.round(teamMembers.reduce((sum, member) => sum + (member.performance || 0), 0) / totalMembers * 100) : 0);
+  const uniqueSkills = summaryData?.unique_skills ?
+    summaryData.unique_skills.length :
+    (teamMembers ? [...new Set(teamMembers.flatMap(member => member.skills || []))].length : 0);
+  const seniorMembers = summaryData?.senior_members || 0;
+  const activeMembers = teamMembers?.filter(member => member.workload > 0).length || 0;
+
+  const isLoading = teamLoading || summaryLoading;
+
+  const refetch = () => {
+    refetchTeam();
+  };
 
   return (
     <div>
@@ -98,7 +102,7 @@ const TeamManagement = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <Card>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{totalMembers}</div>
@@ -125,7 +129,13 @@ const TeamManagement = () => {
           </Card>
           <Card>
             <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-600">{seniorMembers}</div>
+              <div className="text-2xl font-bold text-indigo-600">{activeMembers}</div>
+              <div className="text-sm text-gray-600 mt-1">Active Members</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{seniorMembers}</div>
               <div className="text-sm text-gray-600 mt-1">Senior Members</div>
             </div>
           </Card>
@@ -140,7 +150,7 @@ const TeamManagement = () => {
           ) : (
             <TeamTable
               members={teamMembers || []}
-              loading={loading}
+              loading={isLoading}
               onEdit={handleEditMember}
               onDelete={handleDeleteMember}
             />

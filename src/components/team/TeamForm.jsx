@@ -28,14 +28,21 @@ const TeamForm = ({
 
   useEffect(() => {
     if (member) {
+      // Map API fields to form fields
+      const skillLevelValue = member.level || member.skillLevel || '';
+      const capitalizedSkillLevel = skillLevelValue ?
+        skillLevelValue.charAt(0).toUpperCase() + skillLevelValue.slice(1).toLowerCase() : '';
+
       setFormData({
         name: member.name || '',
         email: member.email || '',
-        skills: member.skills?.join(', ') || '',
-        skillLevel: member.skillLevel || '',
-        workload: member.workload || 0,
-        capacity: member.capacity || 100,
-        performanceScore: member.performanceScore || 0
+        skills: Array.isArray(member.skills) ? member.skills.join(', ') : (member.skills || ''),
+        skillLevel: capitalizedSkillLevel,
+        workload: member.workload || member.current_workload || 0,
+        capacity: member.capacity || member.max_capacity || 100,
+        performanceScore: member.performanceScore !== undefined ? member.performanceScore :
+          (member.performance !== undefined ?
+            (member.performance <= 1 ? Math.round(member.performance * 100) : member.performance) : 0)
       });
     }
   }, [member]);

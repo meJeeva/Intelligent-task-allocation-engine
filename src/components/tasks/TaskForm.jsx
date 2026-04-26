@@ -18,19 +18,6 @@ const TaskForm = ({
 
   const [errors, setErrors] = useState({});
 
-  const difficultyOptions = [
-    { value: 'Low', label: 'Low' },
-    { value: 'Medium', label: 'Medium' },
-    { value: 'High', label: 'High' }
-  ];
-
-  const statusOptions = [
-    { value: 'unassigned', label: 'Unassigned' },
-    { value: 'assigned', label: 'Assigned' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'completed', label: 'Completed' }
-  ];
-
   useEffect(() => {
     if (task) {
       setFormData({
@@ -136,13 +123,15 @@ const TaskForm = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Select
-          label="Difficulty"
+        <Input
+          label="Difficulty (1-10)"
+          type="number"
           name="difficulty"
           value={formData.difficulty}
           onChange={handleChange}
-          options={difficultyOptions}
-          placeholder="Select difficulty level"
+          min="1"
+          max="10"
+          placeholder="Enter difficulty (1-10)"
         />
 
         <div>
@@ -169,7 +158,13 @@ const TaskForm = ({
         name="status"
         value={formData.status}
         onChange={handleChange}
-        options={statusOptions}
+        options={[
+          { value: 'unassigned', label: 'Unassigned' },
+          { value: 'assigned', label: 'Assigned' },
+          { value: 'in_progress', label: 'In Progress' },
+          { value: 'pending', label: 'Pending' },
+          { value: 'completed', label: 'Completed' }
+        ]}
         placeholder="Select task status"
       />
 

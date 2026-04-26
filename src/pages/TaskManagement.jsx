@@ -5,11 +5,12 @@ import Modal from '../components/common/Modal';
 import TaskTable from '../components/tasks/TaskTable';
 import TaskForm from '../components/tasks/TaskForm';
 import useFetch from '../hooks/useFetch';
-import { taskApi, mockApi } from '../services/api';
+import { taskApi } from '../services/api';
 import { showNotification } from '../utils/helpers';
 
 const TaskManagement = () => {
-  const { data: tasks, loading, error, refetch } = useFetch(mockApi.getMockTasks);
+  const { data: tasksData, loading: tasksLoading, error, refetch: refetchTasks } = useFetch(taskApi.getTasks);
+  const { data: summaryData, loading: summaryLoading } = useFetch(taskApi.getTaskSummary);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
@@ -23,18 +24,15 @@ const TaskManagement = () => {
     setIsModalOpen(true);
   };
 
+
   const handleDeleteTask = async (taskId) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
-        try {
-          await taskApi.deleteTask(taskId);
-        } catch (apiError) {
-          await mockApi.deleteTask(taskId);
-        }
-
+        await taskApi.deleteTask(taskId);
         showNotification('Task deleted successfully', 'success');
         refetch();
       } catch (error) {
+        console.error('Error deleting task:', error);
         showNotification('Error deleting task', 'error');
       }
     }
@@ -43,26 +41,18 @@ const TaskManagement = () => {
   const handleFormSubmit = async (taskData) => {
     try {
       if (editingTask) {
-        try {
-          await taskApi.updateTask(editingTask.id, taskData);
-        } catch (apiError) {
-          await mockApi.updateTask(editingTask.id, taskData);
-        }
-
+        await taskApi.updateTask(editingTask.id, taskData);
         showNotification('Task updated successfully', 'success');
       } else {
-        try {
-          await taskApi.addTask(taskData);
-        } catch (apiError) {
-          await mockApi.addTask(taskData);
-        }
-
+        console.log('taskData', taskData)
+        await taskApi.addTask(taskData);
         showNotification('Task created successfully', 'success');
       }
 
       setIsModalOpen(false);
       refetch();
     } catch (error) {
+      console.error('Error saving task:', error);
       showNotification('Error saving task', 'error');
     }
   };
@@ -72,16 +62,41 @@ const TaskManagement = () => {
     setEditingTask(null);
   };
 
-  const totalTasks = tasks?.length || 0;
-  const unassignedTasks = tasks?.filter(task => task.status === 'unassigned').length || 0;
-  const assignedTasks = tasks?.filter(task => task.status === 'assigned').length || 0;
-  const inProgressTasks = tasks?.filter(task => task.status === 'in-progress').length || 0;
-  const completedTasks = tasks?.filter(task => task.status === 'completed').length || 0;
-  const highDifficultyTasks = tasks?.filter(task => task.difficulty === 'High').length || 0;
-  const overdueTasks = tasks?.filter(task => {
+  // Use summary data if available, otherwise calculate from tasks
+  const totalTasks = summaryData?.total_tasks || tasksData?.length || 0;
+  const unassignedTasks = summaryData?.unassigned || (tasksData?.filter(task => task.status === 'unassigned').length || 0);
+  const assignedTasks = summaryData?.assigned || (tasksData?.filter(task => task.status === 'assigned').length || 0);
+  const inProgressTasks = summaryData?.in_progress || (tasksData?.filter(task => task.status === 'in-progress').length || 0);
+  const completedTasks = summaryData?.completed || (tasksData?.filter(task => task.status === 'completed').length || 0);
+  const highDifficultyTasks = summaryData?.high_difficulty_tasks || (tasksData?.filter(task => task.difficulty >= 8).length || 0);
+  const overdueTasks = summaryData?.overdue || (tasksData?.filter(task => {
     if (!task.deadline) return false;
     return new Date(task.deadline) < new Date();
-  }).length || 0;
+  }).length || 0);
+
+  // Transform tasks data to match component expectations
+  const transformedTasks = React.useMemo(() => {
+    if (!tasksData || !Array.isArray(tasksData)) return [];
+    return tasksData.map(task => ({
+      ...task,
+      title: task.task_title || task.title,
+      skills: task.required_skills || task.requiredSkills || task.skills || [],
+      requiredSkills: task.required_skills || task.requiredSkills || task.skills || [],
+      difficulty: task.difficulty,
+      deadline: task.deadline,
+      status: task.status,
+      actions: task.actions || { edit: true, delete: true }
+    }));
+  }, [tasksData]);
+
+  // Combined loading state
+  const isLoading = tasksLoading || summaryLoading;
+
+  // Combined refetch function
+  const refetch = () => {
+    refetchTasks();
+    // Summary data will be refetched automatically by useFetch
+  };
 
   return (
     <div>
@@ -91,12 +106,15 @@ const TaskManagement = () => {
             <h1 className="text-3xl font-bold text-gray-900">Task Management</h1>
             <p className="text-gray-600 mt-2">Create and manage tasks for intelligent allocation</p>
           </div>
-          <Button onClick={handleAddTask}>
-            Add Task
-          </Button>
+          <div className="flex gap-2">
+
+            <Button onClick={handleAddTask}>
+              Add Task
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
           <Card>
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-900">{totalTasks}</div>
@@ -131,6 +149,12 @@ const TaskManagement = () => {
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600">{overdueTasks}</div>
               <div className="text-sm text-gray-600 mt-1">Overdue</div>
+            </div>
+          </Card>
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{highDifficultyTasks}</div>
+              <div className="text-sm text-gray-600 mt-1">High Difficulty</div>
             </div>
           </Card>
         </div>
@@ -216,8 +240,8 @@ const TaskManagement = () => {
             </div>
           ) : (
             <TaskTable
-              tasks={tasks || []}
-              loading={loading}
+              tasks={transformedTasks || []}
+              loading={isLoading}
               onEdit={handleEditTask}
               onDelete={handleDeleteTask}
             />

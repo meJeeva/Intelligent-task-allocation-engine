@@ -2,35 +2,85 @@ import React, { useState } from 'react';
 import Card from '../components/common/Card';
 import AllocationTable from '../components/allocation/AllocationTable';
 import useFetch from '../hooks/useFetch';
-import { allocationApi, mockApi } from '../services/api';
+import { allocationApi } from '../services/api';
 import { showNotification } from '../utils/helpers';
 
 const AllocationResults = () => {
   const [allocationData, setAllocationData] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
 
-  const { data: mockAllocations, refetch } = useFetch(mockApi.getMockAllocationResults);
+  const { data: apiSummary, loading: summaryLoading, refetch: refetchSummary } = useFetch(allocationApi.getAllocationSummary);
+  const { data: apiDetails, loading: detailsLoading, refetch: refetchDetails } = useFetch(allocationApi.getAllocationDetails);
 
   const handleRunAllocation = async () => {
     setIsRunning(true);
     try {
-      let result;
-      try {
-        result = await allocationApi.runAllocation();
-      } catch (apiError) {
-        result = await mockApi.runAllocation();
-      }
+      await allocationApi.runAllocation();
+      showNotification('Task allocation algorithm triggered successfully', 'success');
+      await Promise.all([
+        refetchSummary(),
+        refetchDetails()
+      ]);
 
-      setAllocationData(result);
-      showNotification('Task allocation completed successfully!', 'success');
     } catch (error) {
+      console.error('Error in allocation flow:', error);
       showNotification('Error running allocation algorithm', 'error');
     } finally {
       setIsRunning(false);
     }
   };
 
-  const currentAllocations = allocationData || mockAllocations;
+  const handleExportCsv = async () => {
+    try {
+      const blob = await allocationApi.exportToCsv();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'allocation_results.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      showNotification('CSV exported successfully', 'success');
+    } catch (error) {
+      showNotification('Error exporting CSV', 'error');
+    }
+  };
+
+  const handlePrintReport = async () => {
+    try {
+      await allocationApi.getPrintReport();
+      window.print();
+      showNotification('Print report generated', 'info');
+    } catch (error) {
+      showNotification('Error generating print report', 'error');
+    }
+  };
+
+  const handleShareResults = async () => {
+    try {
+      await allocationApi.shareResults(currentAllocations);
+      showNotification('Results shared successfully', 'success');
+    } catch (error) {
+      showNotification('Error sharing results', 'error');
+    }
+  };
+
+  const transformedDetails = React.useMemo(() => {
+    if (!apiDetails || !Array.isArray(apiDetails)) return null;
+    return apiDetails.map(item => ({
+      taskTitle: item.task || item.task_title || item.taskTitle,
+      taskDifficulty: item.task_difficulty || 5,
+      assigneeName: item.assigned_to || item.assignee_name || item.assigneeName,
+      assigneeEmail: item.assignee_email || 'N/A',
+      suitabilityScore: item.score !== undefined ? Math.round(item.score * 100) : (item.suitability_score ?? item.suitabilityScore),
+      matchedSkills: item.skills_match !== undefined ? [`${Math.round(item.skills_match * 100)}% match`] : (item.matched_skills || item.matchedSkills || []),
+      missingSkills: item.missing_skills || item.missingSkills || [],
+      updatedWorkload: item.updated_workload ?? item.updatedWorkload,
+      workloadChange: item.workload_change || item.workloadChange || 'updated'
+    }));
+  }, [apiDetails]);
+
+  const currentAllocations = (transformedDetails && transformedDetails.length > 0) ? transformedDetails : [];
 
   const getAllocationStats = () => {
     if (!currentAllocations || currentAllocations.length === 0) {
@@ -44,20 +94,30 @@ const AllocationResults = () => {
 
     const totalAllocated = currentAllocations.length;
     const avgMatchScore = Math.round(
-      currentAllocations.reduce((sum, allocation) => sum + allocation.matchScore, 0) / totalAllocated
+      currentAllocations.reduce((sum, allocation) => sum + (allocation.suitabilityScore || 0), 0) / totalAllocated
     );
-    const highConfidenceMatches = currentAllocations.filter(a => a.matchScore >= 80).length;
-    const overloadedAssignments = currentAllocations.filter(a => a.newWorkload > 90).length;
+    const highConfidenceMatches = currentAllocations.filter(a => (a.suitabilityScore || 0) >= 80).length;
+    const overloadedAssignments = currentAllocations.filter(a => (a.updatedWorkload || 0) > 90).length;
+    const balancedCount = currentAllocations.filter(a => (a.updatedWorkload || 0) >= 60 && (a.updatedWorkload || 0) < 80).length;
 
     return {
       totalAllocated,
       avgMatchScore,
       highConfidenceMatches,
-      overloadedAssignments
+      overloadedAssignments,
+      balancedCount
     };
   };
 
-  const stats = getAllocationStats();
+  const calculatedStats = getAllocationStats();
+
+  const stats = {
+    totalAllocated: apiSummary?.tasks_allocated ?? calculatedStats.totalAllocated,
+    avgMatchScore: apiSummary?.avg_match_score_percentage ?? calculatedStats.avgMatchScore,
+    highConfidenceMatches: apiSummary?.high_confidence ?? calculatedStats.highConfidenceMatches,
+    overloadedAssignments: apiSummary?.overloaded_count ?? calculatedStats.overloadedAssignments,
+    balancedCount: apiSummary?.balanced_count ?? calculatedStats.balancedCount
+  };
 
   return (
     <div className="space-y-6">
@@ -66,7 +126,7 @@ const AllocationResults = () => {
         <p className="text-slate-600 mt-2">View and analyze intelligent task allocation results</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <Card>
           <div className="flex flex-col items-center space-y-3">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center">
@@ -116,6 +176,19 @@ const AllocationResults = () => {
             <div className="text-center">
               <div className="text-3xl font-bold text-red-600">{stats.overloadedAssignments}</div>
               <div className="text-sm text-slate-600">Overloaded</div>
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div className="flex flex-col items-center space-y-3">
+            <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-emerald-600">{stats.balancedCount}</div>
+              <div className="text-sm text-slate-600">Balanced Load</div>
             </div>
           </div>
         </Card>
@@ -177,25 +250,19 @@ const AllocationResults = () => {
             <div className="flex flex-wrap gap-3">
               <button
                 className="btn-secondary"
-                onClick={() => {
-                  showNotification('Export to CSV feature coming soon!', 'info');
-                }}
+                onClick={handleExportCsv}
               >
                 Export to CSV
               </button>
               <button
                 className="btn-secondary"
-                onClick={() => {
-                  window.print();
-                }}
+                onClick={handlePrintReport}
               >
                 Print Report
               </button>
               <button
                 className="btn-secondary"
-                onClick={() => {
-                  showNotification('Share feature coming soon!', 'info');
-                }}
+                onClick={handleShareResults}
               >
                 Share Results
               </button>

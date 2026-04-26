@@ -2,62 +2,71 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../components/common/Card';
 import useFetch from '../hooks/useFetch';
-import { mockApi } from '../services/api';
+import { dashboardApi } from '../services/api';
 import { showNotification } from '../utils/helpers';
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-  const { data: teamData, loading: teamLoading } = useFetch(mockApi.getMockTeam);
-  const { data: taskData, loading: taskLoading } = useFetch(mockApi.getMockTasks);
+  const { data: dashboardData, loading: dashboardLoading, error: dashboardError, refetch } = useFetch(dashboardApi.getSummary);
 
-  const teamMembers = teamData || [];
-  const tasks = taskData || [];
+  const dashboardSummary = dashboardData || {};
 
-  const totalMembers = teamMembers.length;
-  const totalTasks = tasks.length;
-  const unassignedTasks = tasks.filter(task => task.status === 'unassigned').length;
-  const assignedTasks = tasks.filter(task => task.status === 'assigned').length;
-  const inProgressTasks = tasks.filter(task => task.status === 'in-progress').length;
-  const completedTasks = tasks.filter(task => task.status === 'completed').length;
-  const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+  const totalMembers = dashboardSummary.team_members || 0;
+  const activeMembers = dashboardSummary.active_members || 0;
+  const totalTasks = dashboardSummary.total_tasks || 0;
+  const assignedTasks = dashboardSummary.assigned_tasks || 0;
+  const unassignedTasks = dashboardSummary.unassigned_tasks || 0;
 
-  const avgWorkload = teamMembers.length > 0
-    ? Math.round(teamMembers.reduce((sum, member) => sum + member.workload, 0) / teamMembers.length)
-    : 0;
-  const avgPerformance = teamMembers.length > 0
-    ? Math.round(teamMembers.reduce((sum, member) => sum + (member.performanceScore || 0), 0) / teamMembers.length)
-    : 0;
+  const taskStatusDist = dashboardSummary.task_status_distribution || {};
+  const pendingTasks = taskStatusDist.pending || 0;
+  const inProgressTasks = taskStatusDist.in_progress || 0;
+  const completedTasks = taskStatusDist.completed || 0;
 
-  const allSkills = new Set();
-  teamMembers.forEach(member => {
-    member.skills?.forEach(skill => allSkills.add(skill));
-  });
+  const taskStatusData = [
+    { label: 'Pending', value: pendingTasks, color: 'bg-amber-500' },
+    { label: 'In Progress', value: inProgressTasks, color: 'bg-blue-600' },
+    { label: 'Completed', value: completedTasks, color: 'bg-green-600' }
+  ];
+
+  const recentTasks = dashboardSummary.recent_tasks || [];
+
+  const uniqueSkillsData = dashboardSummary.unique_skills || {};
+  const uniqueSkills = uniqueSkillsData.count || 0;
+  const allSkillNames = uniqueSkillsData.names || [];
 
   const statsCards = [
     {
       title: 'Team Members',
       value: totalMembers,
-      subtitle: 'Active members',
+      subtitle: 'Total members',
       icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
       color: 'bg-blue-50',
       iconColor: 'text-blue-600'
+    },
+    {
+      title: 'Active Members',
+      value: activeMembers,
+      subtitle: 'Currently working',
+      icon: 'M13 10V3L4 14h7v7l9-11h-7z',
+      color: 'bg-emerald-50',
+      iconColor: 'text-emerald-600'
     },
     {
       title: 'Total Tasks',
       value: totalTasks,
       subtitle: 'All tasks',
       icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
-      color: 'bg-slate-100',
-      iconColor: 'text-slate-600'
+      color: 'bg-green-50',
+      iconColor: 'text-green-600'
     },
     {
       title: 'Assigned Tasks',
       value: assignedTasks,
-      subtitle: 'Currently assigned',
-      icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-      color: 'bg-green-50',
-      iconColor: 'text-green-600'
+      subtitle: 'In progress',
+      icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      color: 'bg-purple-50',
+      iconColor: 'text-purple-600'
     },
     {
       title: 'Unassigned Tasks',
@@ -69,13 +78,6 @@ const Dashboard = () => {
     }
   ];
 
-  const taskStatusData = [
-    { label: 'Pending', value: pendingTasks, color: 'bg-amber-500' },
-    { label: 'In Progress', value: inProgressTasks, color: 'bg-blue-600' },
-    { label: 'Completed', value: completedTasks, color: 'bg-green-600' }
-  ];
-
-  const recentTasks = tasks.slice(0, 5);
 
   const handleAddTeamMember = () => {
     navigate('/team');
@@ -92,10 +94,24 @@ const Dashboard = () => {
     showNotification('Opening Allocation Results to run intelligent allocation', 'info');
   };
 
-  if (teamLoading || taskLoading) {
+  if (dashboardLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (dashboardError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="text-red-600 mb-4">Error loading dashboard data</div>
+        <button
+          onClick={refetch}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -107,7 +123,7 @@ const Dashboard = () => {
         <p className="text-slate-600 mt-2">Overview of your task allocation system</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {statsCards.map((stat, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
             <div className="flex items-center">
@@ -161,10 +177,10 @@ const Dashboard = () => {
         <Card title="Team Skills Overview">
           <div className="space-y-4">
             <div className="text-sm text-slate-600 mb-3">
-              Total unique skills: <span className="font-bold text-slate-900">{allSkills.size}</span>
+              Total unique skills: <span className="font-bold text-slate-900">{uniqueSkills}</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {Array.from(allSkills).slice(0, 12).map((skill, index) => (
+              {allSkillNames.slice(0, 12).map((skill, index) => (
                 <span
                   key={index}
                   className="inline-flex px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-full"
@@ -172,9 +188,9 @@ const Dashboard = () => {
                   {skill}
                 </span>
               ))}
-              {allSkills.size > 12 && (
+              {allSkillNames.length > 12 && (
                 <span className="inline-flex px-3 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded-full">
-                  +{allSkills.size - 12} more
+                  +{allSkillNames.length - 12} more
                 </span>
               )}
             </div>
@@ -189,20 +205,27 @@ const Dashboard = () => {
               <div key={task.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div className="flex-1">
                   <h4 className="text-sm font-medium text-slate-900">{task.title}</h4>
-                  <p className="text-xs text-slate-500 mt-1">{task.description}</p>
+                  <div className="flex items-center space-x-3 mt-1">
+                    <div className="flex flex-wrap gap-1">
+                      {task.required_skills?.map((skill, index) => (
+                        <span key={index} className="inline-flex px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 rounded">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                    {task.deadline && (
+                      <span className="text-xs text-slate-500">
+                        Due: {new Date(task.deadline).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 ml-4">
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${task.priority === 'high' ? 'bg-red-50 text-red-700' :
-                    task.priority === 'medium' ? 'bg-amber-50 text-amber-700' :
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${task.difficulty >= 8 ? 'bg-red-50 text-red-700' :
+                    task.difficulty >= 6 ? 'bg-amber-50 text-amber-700' :
                       'bg-green-50 text-green-700'
                     }`}>
-                    {task.priority}
-                  </span>
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${task.status === 'completed' ? 'bg-green-50 text-green-700' :
-                    task.status === 'in-progress' ? 'bg-blue-50 text-blue-700' :
-                      'bg-slate-100 text-slate-700'
-                    }`}>
-                    {task.status}
+                    Difficulty: {task.difficulty}/10
                   </span>
                 </div>
               </div>

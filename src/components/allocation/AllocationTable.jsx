@@ -149,6 +149,8 @@ const AllocationTable = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {allocations.map((allocation, index) => {
+                    <div className="text-sm text-gray-500">{allocation.assigneeEmail}</div>
+              console.log('allocation',allocation)
               const workloadStatus = getWorkloadStatus(allocation.updatedWorkload);
 
               return (
@@ -166,7 +168,7 @@ const AllocationTable = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{allocation.assigneeName}</div>
-                    <div className="text-sm text-gray-500">{allocation.assigneeEmail}</div>
+                    <div className="text-sm text-gray-500">{allocation.assigneeEmail ?? '-'}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">

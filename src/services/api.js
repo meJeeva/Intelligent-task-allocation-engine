@@ -1,22 +1,17 @@
 import axios from 'axios';
 
-// Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://localhost:5000',
+  baseURL: '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: false,
 });
 
-// Request interceptor to add auth token if available
 api.interceptors.request.use(
   (config) => {
-    // You can add authentication token here if needed
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
     return config;
   },
   (error) => {
@@ -24,45 +19,63 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle common errors
 api.interceptors.response.use(
   (response) => {
     return response.data;
   },
   (error) => {
-    // Handle common error scenarios
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
+    if (error.code === 'NETWORK_ERROR' || error.code === 'ERR_NETWORK') {
+      console.error('Network Error - Possible CORS issue:', error);
+      console.error('URL:', error.config?.url);
+      console.error('Method:', error.config?.method);
+      console.error('Headers:', error.config?.headers);
+    } else if (error.code === 'ECONNREFUSED') {
+      console.error('Connection refused - Backend might be down');
+    } else if (error.response?.status === 401) {
       console.error('Unauthorized access');
     } else if (error.response?.status === 404) {
-      // Handle not found
       console.error('Resource not found');
     } else if (error.response?.status >= 500) {
-      // Handle server errors
       console.error('Server error');
+    } else {
+      console.error('API Error:', error.message);
+      console.error('Error details:', error);
     }
 
     return Promise.reject(error);
   }
 );
 
-// Team Management API
 export const teamApi = {
-  // Get all team members
   getTeam: async () => {
-    try {
-      const response = await api.get('/api/team');
-      return response;
-    } catch (error) {
-      console.error('Error fetching team:', error);
-      throw error;
-    }
+    const response = await api.get('/team-management/members');
+    return response;
   },
 
-  // Add new team member
+  getTeamSummary: async () => {
+    const response = await api.get('/team-management/summary');
+    return response;
+  },
+
   addMember: async (memberData) => {
     try {
-      const response = await api.post('/api/team', memberData);
+      const apiRequestData = {
+        id: `u${Date.now()}`,
+        name: memberData.name,
+        email: memberData.email || null,
+        skill_level: memberData.skills && Array.isArray(memberData.skills) ?
+          memberData.skills.reduce((acc, skill) => {
+            acc[skill] = memberData.skillLevel === 'Senior' ? 9 :
+              memberData.skillLevel === 'Mid' ? 6 : 3;
+            return acc;
+          }, {}) : {},
+        level: memberData.skillLevel?.toLowerCase() || 'junior',
+        current_workload: memberData.workload || 0,
+        max_capacity: memberData.capacity || 3,
+        past_performance: (memberData.performanceScore || 0) / 100
+      };
+
+      const response = await api.post('/team-management/members', apiRequestData);
       return response;
     } catch (error) {
       console.error('Error adding team member:', error);
@@ -70,10 +83,25 @@ export const teamApi = {
     }
   },
 
-  // Update team member
   updateMember: async (id, memberData) => {
     try {
-      const response = await api.put(`/api/team/${id}`, memberData);
+      const apiRequestData = {
+        id: id,
+        name: memberData.name,
+        email: memberData.email || null,
+        skill_level: memberData.skills && Array.isArray(memberData.skills) ?
+          memberData.skills.reduce((acc, skill) => {
+            acc[skill] = memberData.skillLevel === 'Senior' ? 10 :
+              memberData.skillLevel === 'Mid' ? 6 : 3;
+            return acc;
+          }, {}) : {},
+        level: memberData.skillLevel?.toLowerCase() || 'junior',
+        current_workload: memberData.workload || 0,
+        max_capacity: memberData.capacity || 5,
+        past_performance: (memberData.performanceScore || 0) / 100
+      };
+
+      const response = await api.put(`/users/${id}`, apiRequestData);
       return response;
     } catch (error) {
       console.error('Error updating team member:', error);
@@ -81,10 +109,9 @@ export const teamApi = {
     }
   },
 
-  // Delete team member
   deleteMember: async (id) => {
     try {
-      const response = await api.delete(`/api/team/${id}`);
+      const response = await api.delete(`/users/${id}`);
       return response;
     } catch (error) {
       console.error('Error deleting team member:', error);
@@ -93,12 +120,10 @@ export const teamApi = {
   },
 };
 
-// Task Management API
 export const taskApi = {
-  // Get all tasks
   getTasks: async () => {
     try {
-      const response = await api.get('/api/tasks');
+      const response = await api.get('/task-management/tasks');
       return response;
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -106,10 +131,40 @@ export const taskApi = {
     }
   },
 
-  // Add new task
+  getTaskSummary: async () => {
+    try {
+      const response = await api.get('/task-management/summary');
+      return response;
+    } catch (error) {
+      console.error('Error fetching task summary:', error);
+      throw error;
+    }
+  },
+
   addTask: async (taskData) => {
     try {
-      const response = await api.post('/api/tasks', taskData);
+      let requiredSkills = [];
+      if (taskData.required_skills && Array.isArray(taskData.required_skills)) {
+        requiredSkills = taskData.required_skills;
+      } else if (taskData.requiredSkills) {
+        requiredSkills = typeof taskData.requiredSkills === 'string'
+          ? taskData.requiredSkills.split(',').map(skill => skill.trim())
+          : taskData.requiredSkills;
+      }
+
+      const apiRequestData = {
+        id: taskData.id || `t${Date.now()}`, // Use provided ID or generate unique ID
+        title: taskData.title,
+        required_skills: requiredSkills,
+        difficulty: typeof taskData.difficulty === 'number'
+          ? taskData.difficulty
+          : (taskData.difficulty === 'High' ? 8 :
+            taskData.difficulty === 'Medium' ? 5 : 3),
+        deadline: taskData.deadline || null,
+        status: taskData.status || 'pending'
+      };
+
+      const response = await api.post('/tasks', apiRequestData);
       return response;
     } catch (error) {
       console.error('Error adding task:', error);
@@ -120,7 +175,28 @@ export const taskApi = {
   // Update task
   updateTask: async (id, taskData) => {
     try {
-      const response = await api.put(`/api/tasks/${id}`, taskData);
+      let requiredSkills = [];
+      if (taskData.required_skills && Array.isArray(taskData.required_skills)) {
+        requiredSkills = taskData.required_skills;
+      } else if (taskData.requiredSkills) {
+        requiredSkills = typeof taskData.requiredSkills === 'string'
+          ? taskData.requiredSkills.split(',').map(skill => skill.trim())
+          : taskData.requiredSkills;
+      }
+
+      const apiRequestData = {
+        id: taskData.id || id,
+        title: taskData.title,
+        required_skills: requiredSkills,
+        difficulty: typeof taskData.difficulty === 'number'
+          ? taskData.difficulty
+          : (taskData.difficulty === 'High' ? 8 :
+            taskData.difficulty === 'Medium' ? 5 : 3),
+        deadline: taskData.deadline || null,
+        status: taskData.status || 'pending'
+      };
+
+      const response = await api.put(`/tasks/${id}`, apiRequestData);
       return response;
     } catch (error) {
       console.error('Error updating task:', error);
@@ -131,7 +207,7 @@ export const taskApi = {
   // Delete task
   deleteTask: async (id) => {
     try {
-      const response = await api.delete(`/api/tasks/${id}`);
+      const response = await api.delete(`/tasks/${id}`);
       return response;
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -145,7 +221,7 @@ export const allocationApi = {
   // Run task allocation algorithm
   runAllocation: async () => {
     try {
-      const response = await api.post('/allocate');
+      const response = await api.get('/assign');
       return response;
     } catch (error) {
       console.error('Error running allocation:', error);
@@ -163,238 +239,75 @@ export const allocationApi = {
       throw error;
     }
   },
+
+  // Get allocation summary
+  getAllocationSummary: async () => {
+    try {
+      const response = await api.get('/allocation-results/summary');
+      return response;
+    } catch (error) {
+      console.error('Error fetching allocation summary:', error);
+      throw error;
+    }
+  },
+
+  // Get allocation details
+  getAllocationDetails: async () => {
+    try {
+      const response = await api.get('/allocation-results/details');
+      return response;
+    } catch (error) {
+      console.error('Error fetching allocation details:', error);
+      throw error;
+    }
+  },
+
+  // Export allocation results to CSV
+  exportToCsv: async () => {
+    try {
+      const response = await api.get('/allocation-results/export/csv', {
+        responseType: 'blob'
+      });
+      return response;
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      throw error;
+    }
+  },
+
+  // Get print report data
+  getPrintReport: async () => {
+    try {
+      const response = await api.get('/allocation-results/print-report');
+      return response;
+    } catch (error) {
+      console.error('Error fetching print report:', error);
+      throw error;
+    }
+  },
+
+  // Share allocation results
+  shareResults: async (payload) => {
+    try {
+      const response = await api.post('/allocation-results/share-results', payload);
+      return response;
+    } catch (error) {
+      console.error('Error sharing results:', error);
+      throw error;
+    }
+  },
 };
 
-// Enhanced Mock data functions for development (when backend is not available)
-export const mockApi = {
-  // Mock team data with enhanced fields
-  getMockTeam: () => {
-    return Promise.resolve([
-      {
-        id: 1,
-        name: 'John Doe',
-        email: 'john@example.com',
-        skills: ['JavaScript', 'React', 'Node.js'],
-        skillLevel: 'Senior',
-        workload: 75,
-        capacity: 100,
-        performanceScore: 92
-      },
-      {
-        id: 2,
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        skills: ['Python', 'Django', 'PostgreSQL'],
-        skillLevel: 'Mid',
-        workload: 60,
-        capacity: 100,
-        performanceScore: 88
-      },
-      {
-        id: 3,
-        name: 'Mike Johnson',
-        email: 'mike@example.com',
-        skills: ['Java', 'Spring', 'MySQL'],
-        skillLevel: 'Junior',
-        workload: 45,
-        capacity: 100,
-        performanceScore: 78
-      },
-      {
-        id: 4,
-        name: 'Sarah Williams',
-        email: 'sarah@example.com',
-        skills: ['React', 'TypeScript', 'GraphQL'],
-        skillLevel: 'Senior',
-        workload: 85,
-        capacity: 100,
-        performanceScore: 95
-      },
-      {
-        id: 5,
-        name: 'Tom Brown',
-        email: 'tom@example.com',
-        skills: ['Python', 'Machine Learning', 'TensorFlow'],
-        skillLevel: 'Mid',
-        workload: 70,
-        capacity: 100,
-        performanceScore: 85
-      }
-    ]);
-  },
-
-  // Mock tasks data with enhanced fields
-  getMockTasks: () => {
-    return Promise.resolve([
-      {
-        id: 1,
-        title: 'Build React Dashboard',
-        requiredSkills: ['React', 'JavaScript', 'CSS'],
-        difficulty: 'High',
-        deadline: '2024-02-15',
-        status: 'unassigned'
-      },
-      {
-        id: 2,
-        title: 'API Integration',
-        requiredSkills: ['JavaScript', 'API', 'Axios'],
-        difficulty: 'Medium',
-        deadline: '2024-02-20',
-        status: 'unassigned'
-      },
-      {
-        id: 3,
-        title: 'Database Optimization',
-        requiredSkills: ['Python', 'SQL', 'PostgreSQL'],
-        difficulty: 'Low',
-        deadline: '2024-02-25',
-        status: 'unassigned'
-      },
-      {
-        id: 4,
-        title: 'Machine Learning Model',
-        requiredSkills: ['Python', 'Machine Learning', 'TensorFlow'],
-        difficulty: 'High',
-        deadline: '2024-03-01',
-        status: 'unassigned'
-      },
-      {
-        id: 5,
-        title: 'GraphQL API Development',
-        requiredSkills: ['React', 'TypeScript', 'GraphQL'],
-        difficulty: 'Medium',
-        deadline: '2024-02-18',
-        status: 'unassigned'
-      }
-    ]);
-  },
-
-  // Mock allocation results with enhanced data
-  getMockAllocationResults: () => {
-    return Promise.resolve([
-      {
-        taskTitle: 'Build React Dashboard',
-        taskDifficulty: 'High',
-        assigneeName: 'John Doe',
-        assigneeEmail: 'john@example.com',
-        suitabilityScore: 95,
-        matchedSkills: ['React', 'JavaScript'],
-        missingSkills: ['CSS'],
-        updatedWorkload: 90,
-        workloadChange: '+15%'
-      },
-      {
-        taskTitle: 'API Integration',
-        taskDifficulty: 'Medium',
-        assigneeName: 'John Doe',
-        assigneeEmail: 'john@example.com',
-        suitabilityScore: 85,
-        matchedSkills: ['JavaScript'],
-        missingSkills: ['API', 'Axios'],
-        updatedWorkload: 85,
-        workloadChange: '+10%'
-      },
-      {
-        taskTitle: 'Database Optimization',
-        taskDifficulty: 'Low',
-        assigneeName: 'Jane Smith',
-        assigneeEmail: 'jane@example.com',
-        suitabilityScore: 90,
-        matchedSkills: ['Python', 'PostgreSQL'],
-        missingSkills: ['SQL'],
-        updatedWorkload: 80,
-        workloadChange: '+20%'
-      },
-      {
-        taskTitle: 'Machine Learning Model',
-        taskDifficulty: 'High',
-        assigneeName: 'Tom Brown',
-        assigneeEmail: 'tom@example.com',
-        suitabilityScore: 92,
-        matchedSkills: ['Python', 'Machine Learning', 'TensorFlow'],
-        missingSkills: [],
-        updatedWorkload: 90,
-        workloadChange: '+20%'
-      },
-      {
-        taskTitle: 'GraphQL API Development',
-        taskDifficulty: 'Medium',
-        assigneeName: 'Sarah Williams',
-        assigneeEmail: 'sarah@example.com',
-        suitabilityScore: 98,
-        matchedSkills: ['React', 'TypeScript', 'GraphQL'],
-        missingSkills: [],
-        updatedWorkload: 100,
-        workloadChange: '+15%'
-      }
-    ]);
-  },
-
-  // Mock CRUD operations
-  addMember: async (memberData) => {
-    const team = await mockApi.getMockTeam();
-    const newMember = {
-      ...memberData,
-      id: Math.max(...team.map(m => m.id)) + 1
-    };
-    team.push(newMember);
-    return newMember;
-  },
-
-  updateMember: async (id, memberData) => {
-    const team = await mockApi.getMockTeam();
-    const index = team.findIndex(m => m.id === parseInt(id));
-    if (index !== -1) {
-      team[index] = { ...team[index], ...memberData };
-      return team[index];
+// Dashboard API
+export const dashboardApi = {
+  getSummary: async () => {
+    try {
+      const response = await api.get('/dashboard/summary');
+      return response;
+    } catch (error) {
+      console.error('Error fetching dashboard summary:', error);
+      throw error;
     }
-    throw new Error('Member not found');
-  },
-
-  deleteMember: async (id) => {
-    const team = await mockApi.getMockTeam();
-    const index = team.findIndex(m => m.id === parseInt(id));
-    if (index !== -1) {
-      team.splice(index, 1);
-      return { success: true };
-    }
-    throw new Error('Member not found');
-  },
-
-  addTask: async (taskData) => {
-    const tasks = await mockApi.getMockTasks();
-    const newTask = {
-      ...taskData,
-      id: Math.max(...tasks.map(t => t.id)) + 1
-    };
-    tasks.push(newTask);
-    return newTask;
-  },
-
-  updateTask: async (id, taskData) => {
-    const tasks = await mockApi.getMockTasks();
-    const index = tasks.findIndex(t => t.id === parseInt(id));
-    if (index !== -1) {
-      tasks[index] = { ...tasks[index], ...taskData };
-      return tasks[index];
-    }
-    throw new Error('Task not found');
-  },
-
-  deleteTask: async (id) => {
-    const tasks = await mockApi.getMockTasks();
-    const index = tasks.findIndex(t => t.id === parseInt(id));
-    if (index !== -1) {
-      tasks.splice(index, 1);
-      return { success: true };
-    }
-    throw new Error('Task not found');
-  },
-
-  runAllocation: async () => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    return await mockApi.getMockAllocationResults();
   }
 };
 

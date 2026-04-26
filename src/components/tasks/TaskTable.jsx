@@ -25,6 +25,14 @@ const TaskTable = ({
   }
 
   const getDifficultyColor = (difficulty) => {
+    // Handle numeric difficulty (1-10 scale)
+    if (typeof difficulty === 'number') {
+      if (difficulty >= 8) return 'danger';      // High difficulty (8-10)
+      if (difficulty >= 5) return 'warning';     // Medium difficulty (5-7)
+      return 'success';                          // Low difficulty (1-4)
+    }
+
+    // Handle string difficulty (fallback)
     switch (difficulty?.toLowerCase()) {
       case 'high':
         return 'danger';
@@ -122,7 +130,7 @@ const TaskTable = ({
               </td>
               <td className="px-6 py-4">
                 <div className="flex flex-wrap gap-1 max-w-xs">
-                  {task.requiredSkills?.map((skill, index) => (
+                  {task.skills?.map((skill, index) => (
                     <Badge key={index} variant="purple" size="small">
                       {skill}
                     </Badge>
@@ -131,7 +139,10 @@ const TaskTable = ({
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <Badge variant={getDifficultyColor(task.difficulty)} size="small">
-                  {task.difficulty || 'Medium'}
+                  {typeof task.difficulty === 'number' ?
+                    `${task.difficulty}/10` :
+                    (task.difficulty || 'Medium')
+                  }
                 </Badge>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
@@ -148,14 +159,20 @@ const TaskTable = ({
                 <button
                   onClick={() => onEdit(task)}
                   className="text-blue-600 hover:text-blue-900 mr-3"
+                  title="Edit"
                 >
-                  Edit
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
                 </button>
                 <button
                   onClick={() => onDelete(task.id)}
                   className="text-red-600 hover:text-red-900"
+                  title="Delete"
                 >
-                  Delete
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
                 </button>
               </td>
             </tr>
