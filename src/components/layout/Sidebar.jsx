@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import packageJson from '../../../package.json';
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -28,8 +29,8 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-slate-200 min-h-screen transition-all duration-300 ease-in-out shadow-xl`}>
-      <div className={`${isCollapsed ? 'px-3' : 'p-6'}`}>
+    <div className={`${isCollapsed ? 'w-16' : 'w-64'} bg-white border-r border-slate-200 min-h-screen transition-all duration-300 ease-in-out shadow-xl flex flex-col`}>
+      <div className={`flex-grow ${isCollapsed ? 'px-3' : 'p-6'}`}>
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-8`}>
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
@@ -115,6 +116,11 @@ const Sidebar = () => {
             </div>
           </div>
         )}
+      </div>
+      <div className={`p-4 border-t border-slate-100 ${isCollapsed ? 'flex justify-center' : ''}`}>
+        <p className={`text-[10px] font-medium text-slate-400 tracking-wider uppercase ${isCollapsed ? '' : 'ml-2'}`}>
+          {isCollapsed ? `v${packageJson.version}` : `Version ${packageJson.version}`}
+        </p>
       </div>
     </div>
   );
