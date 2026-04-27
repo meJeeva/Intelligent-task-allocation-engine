@@ -121,11 +121,11 @@ const TeamTable = ({
                     }
                   </span>
                   <Badge
-                    variant={getPerformanceColor(member.performance ?? member.performanceScore ?? 0)}
+                    variant={getPerformanceColor(member.performance ?? member.performance ?? 0)}
                     size="small"
                   >
-                    {(member.performance >= 0.9 || member.performanceScore >= 90) ? 'Excellent' :
-                      (member.performance >= 0.8 || member.performanceScore >= 80) ? 'Good' : 'Needs Improvement'}
+                    {(member.performance >= 90) ? 'Excellent' :
+                      ( member.performance >= 80) ? 'Good' : 'Needs Improvement'}
                   </Badge>
                 </div>
               </td>
